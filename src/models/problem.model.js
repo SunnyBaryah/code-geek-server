@@ -1,0 +1,50 @@
+import mongoose, {Schema} from "mongoose";
+const problemSchema=new mongoose.Schema({
+    id:{
+        required:true,
+        type:Number,
+    },
+    title:{
+        required:true,
+        type:String
+    },
+    description:{
+        required:true,
+        type:String
+    },
+    difficulty:{
+        required:true,
+        type:String
+    },
+    constraints:[{
+        item:{
+            type:String
+        }
+    }],
+    examples:[{
+        input:{
+            type:String,
+        },
+        output:{
+            type:String,
+        },
+        explanation:{
+            type:String,
+        },
+    }],
+    test_cases:[{
+        input:{
+            type:String,
+            required:true
+        },
+        expected_output:{
+            type:String,
+            required:true
+        },
+        isHidden:{
+            type:Boolean,
+            required:true
+        },
+    }],
+});
+export const Problem=mongoose.model("Problem", problemSchema);
