@@ -11,7 +11,7 @@ async function getReponse(tokens, retries) {
     url: "https://judge0-ce.p.rapidapi.com/submissions/batch",
     params: {
       tokens,
-      fields: "status",
+      fields: "status,stdout,stderr",
     },
     headers: {
       "x-rapidapi-key": process.env.RAPID_API_KEY,
