@@ -1,6 +1,7 @@
 import { generateContent } from "../utils/aiService.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+
 export async function fetchResponse(req, res) {
   // console.log(req.body);
   const prompt = req.body.prompt;
