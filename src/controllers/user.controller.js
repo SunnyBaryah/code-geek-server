@@ -47,6 +47,25 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdUser, "User Registered Successfully!"));
 });
 
+const deleteUser = asyncHandler(async (req, res, next) => {
+  const id = req.body._id;
+  await User.findByIdAndDelete(id)
+    .then((deletedDocument) => {
+      if (deletedDocument) {
+        // console.log("Document deleted:", deletedDocument);
+        return res
+          .status(201)
+          .json(new ApiResponse(200, {}, "User Deleted Successfully!"));
+      } else {
+        // console.log("No document found with that ID");
+        throw new ApiError(404, "No user found with that ID");
+      }
+    })
+    .catch((error) => {
+      next(error);
+    });
+});
+
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   if (!email) {
@@ -81,6 +100,47 @@ const loginUser = asyncHandler(async (req, res) => {
         200,
         { user: loggedInUser, accessToken, refreshToken },
         "User Logged In successfully"
+      )
+    );
+});
+
+const loginAdmin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email) {
+    throw new ApiError(400, "Email is required");
+  }
+  const foundUser = await User.findOne({ $or: [{ email }] });
+  if (!foundUser) {
+    throw new ApiError(404, "User does not exist");
+  }
+  const isPasswordCorrect = await foundUser.isPasswordCorrect(password);
+  if (!isPasswordCorrect) {
+    throw new ApiError(401, "Incorrect password");
+  }
+  if (foundUser.isAdmin !== true) {
+    throw new ApiError(401, "Id does not have Admin rights");
+  }
+  const { accessToken, refreshToken } = await generateAcessAndRefreshToken(
+    foundUser._id
+  );
+  const loggedInUser = await User.findById(foundUser._id).select(
+    "-password -refreshToken"
+  );
+  // Cookie generation
+  const options = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  };
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        { user: loggedInUser, accessToken, refreshToken },
+        "Admin Logged In successfully"
       )
     );
 });
@@ -189,6 +249,25 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
+const getAllUsers = asyncHandler(async (req, res) => {
+  const data = await User.find({});
+  if (!data) {
+    throw new ApiError(404, "Users not found");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { data }, "Users Found Successfully"));
+});
+
+const updateAccountStatus = asyncHandler(async (req, res) => {
+  const payload = req.body.data;
+  const id = payload._id;
+  const data = await User.findByIdAndUpdate({ _id: id }, payload, {
+    new: true,
+  });
+  res.status(200).json(new ApiResponse(`Updated the user details`, data));
+});
+
 const addSolvedProblem = asyncHandler(async (req, res) => {
   const { problem_id, difficulty, problem_title } = req.body;
   // console.log("Id : ", problem_id, " Diff : ",  difficulty)
@@ -198,26 +277,37 @@ const addSolvedProblem = asyncHandler(async (req, res) => {
   // $push pushes an element into the array
   // $ne means not equal to
   const user = await User.findOneAndUpdate(
-    { 
-      _id: req.user._id, 
-      "solved_questions.problem_id": { $ne: problem_id } // Check if problem_id does not exist
+    {
+      _id: req.user._id,
+      "solved_questions.problem_id": { $ne: problem_id }, // Check if problem_id does not exist
     },
     {
-      $addToSet: { solved_questions: {problem_id, difficulty, problem_title} } // Add if not already in the array
+      $addToSet: {
+        solved_questions: { problem_id, difficulty, problem_title },
+      }, // Add if not already in the array
     },
     { new: true }
   );
-  return res.status(200)
+  return res
+    .status(200)
     .json(new ApiResponse(200, user, "Solved Problems updated successfully"));
 });
 
-const getSolvedProblems= asyncHandler(async (req, res)=>{
-  const user=await User.findById(req?.user._id);
-  if(!user){
+const getSolvedProblems = asyncHandler(async (req, res) => {
+  const user = await User.findById(req?.user._id);
+  if (!user) {
     throw new ApiError(404, "User not found");
   }
-  return res.status(200).json(new ApiResponse(200, user.solved_questions, "Solved Questions fetched successfully"));
-})
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user.solved_questions,
+        "Solved Questions fetched successfully"
+      )
+    );
+});
 export {
   registerUser,
   loginUser,
@@ -227,5 +317,9 @@ export {
   getCurrentUser,
   updateAccountDetails,
   addSolvedProblem,
-  getSolvedProblems
+  getSolvedProblems,
+  loginAdmin,
+  updateAccountStatus,
+  getAllUsers,
+  deleteUser,
 };
