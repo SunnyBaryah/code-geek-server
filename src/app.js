@@ -19,10 +19,15 @@ import {
   userRouter,
   submissionRouter,
   aiRouter,
+  contestRouter,
+  contestSubmissionRouter,
 } from "./routes/index.js";
+
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/problem", problemRouter);
 app.use("/api/v1/submission", submissionRouter);
 app.use("/api/v1/ai", aiRouter);
+app.use("/api/v1/contest", contestRouter);
+app.use("/api/v1/contestSubmission", contestSubmissionRouter);
 
 export { app };
