@@ -6,6 +6,9 @@ import { User } from "../models/user.model.js";
 export const verifyJWT = asyncHandler(async (req, res, next) => {
   try {
     // console.log("reqCookies: ", req.header);
+    if (!req.cookies?.accessToken && !req.header("Authorization")) {
+      throw new ApiError(401, "Unauthorized Access");
+    }
     const token =
       req.cookies?.accessToken ||
       req.header("Authorization").replace("Bearer ", "");
@@ -29,6 +32,9 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 
 export const verifyJWTAdmin = asyncHandler(async (req, res, next) => {
   try {
+    if (!req.cookies?.accessToken && !req.header("Authorization")) {
+      throw new ApiError(401, "Unauthorized Access");
+    }
     // console.log("reqCookies: ", req.header);
     const token =
       req.cookies?.accessToken ||
@@ -41,8 +47,11 @@ export const verifyJWTAdmin = asyncHandler(async (req, res, next) => {
     const user = await User.findById(decodedToken._id).select(
       "-password -refreshToken"
     );
-    if (!user || user.isAdmin !== true) {
+    if (!user) {
       throw new ApiError(401, "Invalid Access Token");
+    }
+    if (user.isAdmin !== true) {
+      throw new ApiError(401, "Admin privileges not found");
     }
     req.user = user;
     next();
